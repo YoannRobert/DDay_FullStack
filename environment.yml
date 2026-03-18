@@ -1,0 +1,19 @@
+name: dday
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - boto3=1.42.59
+  - fastapi=0.135.1
+  - matplotlib=3.10.8
+  - mlflow=3.10.0
+  - numpy=2.2.6
+  - pandas=2.3.3
+  - pip=24.3.1
+  - plotly=6.6.0
+  - python=3.10.19
+  - requests=2.32.5
+  - scikit-learn=1.7.2
+  - xgboost=3.2.0
+  - pip:
+      - -r requirements.txt
