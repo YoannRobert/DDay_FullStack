@@ -8,9 +8,9 @@ sed \
   /app/basic_auth.ini.template > /app/basic_auth.ini
 
 echo ">>> Launching MLflow..."
+export MLFLOW_AUTH_CONFIG_PATH=/app/basic_auth.ini
 mlflow server \
   --app-name basic-auth \
-  --auth-config-path /app/basic_auth.ini \
   --host 0.0.0.0 \
   --port ${PORT} \
   --workers 1 \
