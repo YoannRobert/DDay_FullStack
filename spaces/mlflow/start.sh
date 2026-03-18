@@ -24,6 +24,7 @@ MLFLOW_PID=$!
 echo ">>> Waiting for MLflow to start ..."
 until curl -s -f \
   -H "Host: ${HF_DEMODAY_SPACE_URL}" \
+  -H "Content-Type: application/json" \
   -u "${ADMIN_USERNAME}:${ADMIN_PASSWORD}" \
   http://localhost:${PORT}/api/2.0/mlflow/experiments/search \
   -d '{"max_results": 1}' > /dev/null 2>&1; do
