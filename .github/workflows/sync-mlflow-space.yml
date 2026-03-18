@@ -7,6 +7,7 @@ on:
       - develop
     paths:
       - 'spaces/mlflow/**'  # triggered only when this folder changes
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -29,5 +30,5 @@ jobs:
           git add .
           git commit -m "Sync from GitHub – ${{ github.sha }}"
           git push --force \
-            https://${{ secrets.HF_DEMODAY_USERNAME }}:${{ HF_DEMODAY_TOKEN }}@${{ secrets.HF_DEMODAY_REPO_URL }} \
+            https://${{ secrets.HF_DEMODAY_USERNAME }}:${{ secrets.HF_DEMODAY_TOKEN }}@${{ secrets.HF_DEMODAY_REPO_URL }} \
             main
