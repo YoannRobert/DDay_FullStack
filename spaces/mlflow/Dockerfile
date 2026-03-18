@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends libpq5 curl && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 user \
-    && chown -R user:user /app \
+    && chown -R user:user /app
 
 USER user
 ENV PATH="/home/user/.local/bin:$PATH"
