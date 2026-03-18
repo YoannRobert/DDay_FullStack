@@ -12,6 +12,7 @@ mlflow server \
   --app-name basic-auth \
   --host 0.0.0.0 \
   --port ${PORT} \
+  --workers 1 \
   --allowed-hosts ${HF_DEMODAY_SPACE_URL} \
   --cors-allowed-origins "https://${HF_DEMODAY_SPACE_URL}" \
   --backend-store-uri "postgresql://${NEON_USERNAME}:${NEON_PASSWORD}@${NEON_HOST}/neondb?sslmode=require" \
@@ -21,6 +22,7 @@ MLFLOW_PID=$!
 
 echo ">>> Waiting for MLflow to start ..."
 until curl -s -f \
+  -H "Host: ${HF_DEMODAY_SPACE_URL}" \
   -u "${ADMIN_USERNAME}:${ADMIN_PASSWORD}" \
   http://localhost:${PORT}/api/2.0/mlflow/experiments/search \
   -d '{"max_results": 1}' > /dev/null 2>&1; do
@@ -34,9 +36,9 @@ echo ">>> Creating user accounts ..."
 create_user() {
   local USERNAME=$1
   local PASSWORD=$2
-
   RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
     -X POST http://localhost:${PORT}/api/2.0/mlflow/users/create \
+    -H "Host: ${HF_DEMODAY_SPACE_URL}" \
     -u "${ADMIN_USERNAME}:${ADMIN_PASSWORD}" \
     -H "Content-Type: application/json" \
     -d "{\"username\": \"${USERNAME}\", \"password\": \"${PASSWORD}\"}")
