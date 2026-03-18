@@ -1,0 +1,33 @@
+name: Sync MLflow Space → HuggingFace
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'spaces/mlflow/**'  # triggered only when this folder changes
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push vers HuggingFace Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_DEMODAY_TOKEN }}
+        run: |
+          cd spaces/mlflow
+          git init -b main
+          git config user.email "ci@github.com"
+          git config user.name "GitHub Actions"
+          git add .
+          git commit -m "Sync from GitHub – ${{ github.sha }}"
+          git push --force \
+            https://${{ secrets.HF_DEMODAY_USERNAME }}:${HF_DEMODAY_TOKEN}@${{ secrets.HF_DEMODAY_SPACE_URL }} \
+            main
