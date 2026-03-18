@@ -10,6 +10,7 @@ sed \
 echo ">>> Launching MLflow..."
 mlflow server \
   --app-name basic-auth \
+  --auth-config-path /app/basic_auth.ini \
   --host 0.0.0.0 \
   --port ${PORT} \
   --workers 1 \
