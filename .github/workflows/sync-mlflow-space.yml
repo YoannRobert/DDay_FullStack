@@ -7,6 +7,7 @@ on:
       - develop
     paths:
       - 'spaces/mlflow/**'  # triggered only when this folder changes
+  workflow_dispatch:
 
 jobs:
   sync:
