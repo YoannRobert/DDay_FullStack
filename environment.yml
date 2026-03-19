@@ -12,6 +12,7 @@ dependencies:
   - pip=24.3.1
   - plotly=6.6.0
   - python=3.10.19
+  - python-dotenv=1.2.2
   - requests=2.32.5
   - scikit-learn=1.7.2
   - xgboost=3.2.0
