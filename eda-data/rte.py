@@ -1,37 +1,52 @@
+import datetime as dt
 import pandas as pd
 import requests
 import os
+from dotenv import load_dotenv
 
-url_token_oauth = "https://digital.iservices.rte-france.com/token/oauth/"
-headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": "Basic " + os.getenv("RTE_SECRET_KEY")
+def fetch_consumption_data(days: int = 35, margin_days: int = 1):
+
+    load_dotenv()
+
+    url_token_oauth = "https://digital.iservices.rte-france.com/token/oauth/"
+    headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Authorization": "Basic " + os.getenv("RTE_SECRET_KEY")
+        }
+    response_token = requests.post(url_token_oauth, headers=headers)
+    data = response_token.json()
+    token_oauth = data["access_token"]
+
+    end_date = dt.datetime.now(tz=dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
+    start_date = end_date - dt.timedelta(days=days)
+    start_date_with_margin = end_date - dt.timedelta(days=days + margin_days)
+    end_date_str = end_date.isoformat()
+    start_date_with_margin_str = start_date_with_margin.isoformat()
+
+    api_url = "https://digital.iservices.rte-france.com/open_api/consumption/v1/short_term"
+
+    headers = {
+        "Authorization": "Bearer " + token_oauth
     }
-response_token = requests.post(url_token_oauth, headers=headers)
-data = response_token.json()
-token_oauth = data["access_token"]
 
-start_date = '2026-01-15T00:00:00+00:00'
-end_date = '2026-03-20T09:00:00+00:00'
-type = 'REALISED'
+    params = {
+        "type": 'REALISED',
+        "start_date": start_date_with_margin_str,
+        "end_date": end_date_str
+    }
 
-api_url = "https://digital.iservices.rte-france.com/open_api/consumption/v1/short_term"
+    response = requests.get(api_url, headers=headers, params=params)
+    data = response.json()
 
-headers = {
-    "Authorization": "Bearer " + token_oauth
-}
+    df = pd.DataFrame({'start_date': [], 'end_date': [], 'updated_date': [], 'value': []})
 
-params = {
-    "type": type,
-    "start_date": start_date,
-    "end_date": end_date
-}
+    for d in data['short_term'][0]['values']:
+        the_end_date = dt.datetime.fromisoformat(d['end_date'])
+        if start_date < the_end_date < end_date:
+            df = pd.concat([df, pd.DataFrame(d, index=[0])], ignore_index=True)
 
-response = requests.get(api_url, headers=headers, params=params)
-data = response.json()
+    return df.reset_index(drop=True)
 
-df_conso = pd.DataFrame({'start_date': [], 'end_date': [], 'updated_date': [], 'value': []})
 
-for i in range(1, 3361): # 3360 1/4 d'heures = 35 jours
-    observation = pd.DataFrame(data['short_term'][0]['values'][-i], index=[0])
-    df_conso = pd.concat([df_conso, observation], ignore_index=True)
+if __name__ == "__main__":
+    fetch_consumption_data()
