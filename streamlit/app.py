@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 
 @st.cache_data
 def load_dataset():
-    df = pd.read_csv('../csv/power_consumption_2000_2025_hourly.csv')
+    df = pd.read_csv('../../data/csv/power_consumption_2000_2025_hourly.csv')
     df['start_date'] = pd.to_datetime(df['start_date'], utc=True).dt.tz_convert('Europe/Paris')
     df['end_date'] = pd.to_datetime(df['end_date'], utc=True).dt.tz_convert('Europe/Paris')
     return df
@@ -91,12 +91,12 @@ start_year, end_year = st.slider( label="Année", key="range_year",
 )
 
 # Month slider
-start_month, end_month = st.slider( label="Mois", key="range_month",
-    min_value=2000-01,
-    max_value=12,
+"""start_month, end_month = st.slider( label="Mois", key="range_month",
+    min_value='2000-01',
+    max_value='2025-01',
     value=(1,12),
     on_change=update_range_month
-)
+)"""
 
 col1_date, col2_date = st.columns(2)
 # Date calendar selector

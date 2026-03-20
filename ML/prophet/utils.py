@@ -2,6 +2,12 @@ import pandas as pd
 import plotly.express as px
 from prophet import Prophet
 from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # conversion pour prophet
 def convert_df_to_prophet(df):
@@ -79,20 +85,28 @@ def create_train_test(df, train_period, test_period, period="3 days", n_iter=1):
     return train_test_sets
 
 # train and predict for each train_test_set
-def train_predict(train_test_sets, regressors=[]):
+def train_predict(train_test_sets, regressors=[], hyperparams={}, verbose=True):
 
     results = []
+    metrics = {
+        'mape': {
+            'train': [],
+            'test': []
+        }
+    }
     for i, tt_set in enumerate(train_test_sets): 
-        print(f"SET {i}") 
-        print(f"train from {tt_set[0]['ds'].min()} to {tt_set[0]['ds'].max()}")
-        print(f"test from {tt_set[1]['ds'].min()} to {tt_set[1]['ds'].max()}")
+        if verbose:
+            print(f"SET {i}") 
+            print(f"train from {tt_set[0]['ds'].min()} to {tt_set[0]['ds'].max()}")
+            print(f"test from {tt_set[1]['ds'].min()} to {tt_set[1]['ds'].max()}")
+        else:
+            print(f"SET {i+1}/{len(train_test_sets)}")
         # define train and test set
         train_set = tt_set[0]
         test_set = tt_set[1]
-        print('columns',train_set.columns)
 
         # model
-        model = Prophet()
+        model = Prophet(**hyperparams)
         if len(regressors) > 0:
             for regressor in regressors:
                 model.add_regressor(regressor)
@@ -108,8 +122,30 @@ def train_predict(train_test_sets, regressors=[]):
         test_mae = mean_absolute_error(test_set['y'], test_pred['yhat'])
         train_mape = mean_absolute_percentage_error(train_set['y'], train_pred['yhat'])
         test_mape = mean_absolute_percentage_error(test_set['y'], test_pred['yhat'])
-        
-        print(f'Train MAE: {train_mae:.2f}, Test MAE: {test_mae:.2f}')
-        print(f'Train MAPE: {100*train_mape:.2f}, Test MAPE: {100*test_mape:.2f}')
-        print('-' * 50)
-    return results
+
+        metrics['mape']['train'].append(train_mape)
+        metrics['mape']['test'].append(test_mape)
+        if verbose:
+            print(f'Train MAE: {train_mae:.2f}, Test MAE: {test_mae:.2f}')
+            print(f'Train MAPE: {100*train_mape:.2f}%, Test MAPE: {100*test_mape:.2f}%')
+            print('-' * 50)
+
+    print(f"TRAIN MAPE MEAN: {100*list_mean(metrics['mape']['train']):.2f}% - \
+            TEST MAPE MEAN: {100*list_mean(metrics['mape']['test']):.2f}%")
+    
+    return results, metrics
+
+# log in a file metrics for training
+def log_metrics(metrics, title="", file_name="metrics.txt"):
+    now_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+    with open( os.getenv('LOG_STORAGE') + file_name, 'a') as f:
+        f.write(f"{now_str} - {title}\n")
+        f.write(f"Train MAPE mean: {100*list_mean(metrics['mape']['train']):.2f}%\n")
+        f.write(f"Test MAPE mean: {100*list_mean(metrics['mape']['test']):.2f}%\n")
+        f.write("\n")
+
+# calculate mean of a list
+def list_mean(lst):
+    if len(lst) == 0:
+        return 0
+    return sum(lst) / len(lst)
