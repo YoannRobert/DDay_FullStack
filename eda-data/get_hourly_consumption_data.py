@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import os
 from dotenv import load_dotenv
+from aggregate_to_hourly import aggregate_to_hourly
 
 def fetch_consumption_data(days: int = 35, margin_days: int = 1):
 
@@ -44,9 +45,6 @@ def fetch_consumption_data(days: int = 35, margin_days: int = 1):
         the_end_date = dt.datetime.fromisoformat(d['end_date'])
         if start_date < the_end_date < end_date:
             df = pd.concat([df, pd.DataFrame(d, index=[0])], ignore_index=True)
+    df = aggregate_to_hourly(df, agg_func={"updated_date": "max", "value": "mean"})
 
     return df.reset_index(drop=True)
-
-
-if __name__ == "__main__":
-    fetch_consumption_data()
