@@ -43,8 +43,15 @@ def fetch_consumption_data(days: int = 35, margin_days: int = 1):
 
     for d in data['short_term'][0]['values']:
         the_end_date = dt.datetime.fromisoformat(d['end_date'])
-        if start_date < the_end_date < end_date:
+        if start_date < the_end_date <= end_date:
             df = pd.concat([df, pd.DataFrame(d, index=[0])], ignore_index=True)
+
+    # Convert all timestamp columns to UTC — the RTE API returns local Paris
+    # time with an offset (e.g. +01:00 or +02:00). utc=True parses the offset
+    # and normalises to UTC, making the timezone unambiguous year-round.
+    for col in ("start_date", "end_date", "updated_date"):
+        df[col] = pd.to_datetime(df[col], utc=True)
+
     df = aggregate_to_hourly(df, agg_func={"updated_date": "max", "value": "mean"})
 
     return df.reset_index(drop=True)
