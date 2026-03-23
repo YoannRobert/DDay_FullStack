@@ -3,12 +3,17 @@ import streamlit as st
 import numpy as np
 import plotly.express as px
 import datetime
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 st.set_page_config(layout="wide")
 
 @st.cache_data
 def load_dataset():
-    df = pd.read_csv('../../data/csv/power_consumption_2000_2025_hourly.csv')
+    df = pd.read_csv(os.environ.get('DATA_STORAGE') + 'power_consumption_meteo_2021_2025_utc.csv',
+        storage_options={'key': os.environ.get('AWS_ACCESS_KEY'), 'secret': os.environ.get('AWS_SECRET_KEY')})
     df['start_date'] = pd.to_datetime(df['start_date'], utc=True).dt.tz_convert('Europe/Paris')
     df['end_date'] = pd.to_datetime(df['end_date'], utc=True).dt.tz_convert('Europe/Paris')
     return df
@@ -21,11 +26,9 @@ st.header("Application de prédiction de consommation électrique")
 
 st.divider()
 
-st.write("Test Deploy from my github")
-
 
 # Session State
-default_start_date = datetime.date(2020, 1, 1)
+default_start_date = datetime.date(2021, 1, 1)
 default_end_date = datetime.date(2025, 12, 31)
 
 # start_datetime of data
@@ -85,33 +88,26 @@ with col3_stats:
 
 # Year slider
 start_year, end_year = st.slider( label="Année", key="range_year",
-    min_value=2000,
+    min_value=2021,
     max_value=2025,
-    value=(2020,2025),
+    value=(2021,2025),
     on_change=update_range_year
 )
 
-# Month slider
-"""start_month, end_month = st.slider( label="Mois", key="range_month",
-    min_value='2000-01',
-    max_value='2025-01',
-    value=(1,12),
-    on_change=update_range_month
-)"""
 
 col1_date, col2_date = st.columns(2)
 # Date calendar selector
 with col1_date:
     start_time = st.date_input( label="Date de début", key="inp_start_date",
         value=default_start_date,
-        min_value=datetime.date(2000, 1, 1),
+        min_value=datetime.date(2021, 1, 1),
         max_value=datetime.date(2025, 12, 31),
         on_change=update_start_datetime
     )
 with col2_date:
     end_time = st.date_input( label="Date de fin", key="inp_end_date",
         value=default_end_date,
-        min_value=datetime.date(2000, 1, 1),
+        min_value=datetime.date(2021, 1, 1),
         max_value=datetime.date(2025, 12, 31),
         on_change=update_end_datetime
     )
