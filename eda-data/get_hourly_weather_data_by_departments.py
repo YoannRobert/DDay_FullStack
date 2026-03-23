@@ -410,6 +410,7 @@ def last_completed_hour() -> datetime:
 def fetch_weather_all_departments(
     departments: list[DepartmentRecord],
     past_days:   int,
+    variables:   list[str] = HOURLY_VARIABLES,
 ) -> list[dict]:
     """
     Fetch all hourly weather variables for all departments in a single
@@ -431,7 +432,7 @@ def fetch_weather_all_departments(
     params = {
         "latitude":      lats,
         "longitude":     lons,
-        "hourly":        ",".join(HOURLY_VARIABLES),
+        "hourly":        ",".join(variables),
         "past_days":     past_days,
         "forecast_days": 1,             # include today's partial data
         "timezone":      "Europe/Paris",
@@ -439,7 +440,7 @@ def fetch_weather_all_departments(
         "precipitation_unit": "mm",
     }
 
-    print(f"[Open-Meteo] Fetching {len(HOURLY_VARIABLES)} variables for "
+    print(f"[Open-Meteo] Fetching {len(variables)} variable(s) for "
           f"{len(departments)} departments (past_days={past_days})...")
     response = requests.get(OPEN_METEO_FORECAST_URL, params=params, timeout=60)
     response.raise_for_status()
@@ -574,9 +575,10 @@ def build_records(
 # ===========================================================================
 
 def fetch_department_weather(
-    days:         int  | None = None,
-    use_fallback: bool        = False,
-    export_csv:   bool        = False,
+    days:         int             | None = None,
+    use_fallback: bool                   = False,
+    export_csv:   bool                   = False,
+    weather_data: str | list[str]        = "temperature_2m",
 ) -> pd.DataFrame:
     """
     Fetch all hourly weather variables for all 94 metropolitan French
@@ -591,6 +593,11 @@ def fetch_department_weather(
     Args:
         days         : Number of past days to fetch (default: 35, max: 92).
         use_fallback : Skip Wikidata and use the embedded INSEE 2021 dataset.
+        weather_data : Variable(s) to fetch. Accepts a single variable name (str)
+                       or a list of variable names (list[str]).
+                       Default: "temperature_2m". All valid Open-Meteo hourly
+                       variable names are accepted (see HOURLY_VARIABLES for
+                       the full list used in the original script).
 
     Returns:
         DataFrame with one row per (department, completed hour).
@@ -624,14 +631,17 @@ def fetch_department_weather(
         MAX_PAST_DAYS,
     ))
     use_fallback = cli_args.use_fallback or use_fallback
-    export_csv = cli_args.export_csv or export_csv
+    export_csv   = cli_args.export_csv or export_csv
+    resolved_variables: list[str] = (
+        [weather_data] if isinstance(weather_data, str) else list(weather_data)
+    )
 
     run_ts   = datetime.now()
     cutoff   = last_completed_hour()
     ts_str   = run_ts.strftime("%Y%m%d_%H%M%S")
 
     print("=" * 65)
-    print(f"  France Department Weather — all variables — last {days} day(s)")
+    print(f"  France Department Weather — {len(resolved_variables)} variable(s) — last {days} day(s)")
     print(f"  Cutoff : {cutoff.strftime('%Y-%m-%dT%H:%M')} (last completed hour)")
     print(f"  Run    : {run_ts.strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 65)
@@ -646,7 +656,7 @@ def fetch_department_weather(
     # Step 2 — Single multi-location API call
     # ------------------------------------------------------------------
     try:
-        api_results = fetch_weather_all_departments(departments, days)
+        api_results = fetch_weather_all_departments(departments, days, resolved_variables)
     except requests.RequestException as exc:
         print(f"[ERROR] Open-Meteo API call failed: {exc}", file=sys.stderr)
         sys.exit(1)
