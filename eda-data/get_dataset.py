@@ -34,4 +34,17 @@ def get_dataset(past_days: int = 35):
     columns.insert(2, "value")
     df = df.loc[:, columns]
 
+    df.rename(
+        columns={
+            "value": "consumption_MW",
+            "mean": "T_mean_degC",
+            "min": "T_min_degC",
+            "max": "T_max_degC",
+            "median": "T_median_degC",
+            "std": "T_std_degC",
+            "q1": "T_q1_degC",
+            "q3": "T_q3_degC",
+        },
+        inplace=True)
+
     return df.reset_index(drop=True)
