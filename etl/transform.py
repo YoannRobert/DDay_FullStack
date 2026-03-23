@@ -1,12 +1,6 @@
 import pandas as pd
-from get_hourly_consumption_data import fetch_consumption_data
-from get_hourly_weather_data_by_departments import fetch_department_weather
 
-
-def get_dataset(past_days: int = 35):
-    consumption_data = fetch_consumption_data(past_days=past_days)[["start_date", "end_date", "value"]]
-    weather_data = fetch_department_weather(past_days=past_days)[["Department Code", "Timestamp", "Temperature (°C)"]]
-
+def transform_datasets(consumption_data, weather_data):
     consumption_data.rename(columns={"Timestamp": "end_date"}, inplace=True)
     weather_data.rename(columns={"Department Code": "dept_code", "Temperature (°C)": "temperature"}, inplace=True)
 

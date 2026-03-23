@@ -23,11 +23,10 @@ Usage:
 
 import argparse
 import sys
-import unicodedata
 import pandas as pd
 import requests
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict
 
