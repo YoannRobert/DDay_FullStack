@@ -22,6 +22,8 @@ st.header("Application de prédiction de consommation électrique")
 
 st.divider()
 
+st.write("Test Deploy from my github")
+
 
 # Session State
 default_start_date = datetime.date(2020, 1, 1)
