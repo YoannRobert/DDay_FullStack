@@ -25,7 +25,13 @@ def get_dataset(days: int = 35):
         ]
     ).reset_index()
 
-    df = pd.merge(consumption_data, weather_data_grouped_by_timestamp, left_on='end_date', right_on="Timestamp", how='left')
-    df.drop(columns=['Timestamp'], inplace=True, axis=1)
+    df = pd.merge(consumption_data, weather_data_grouped_by_timestamp, left_on='end_date', right_on="Timestamp", how='right')
+    df.drop(columns=['end_date'], inplace=True, axis=1)
+    df.rename(columns={"Timestamp": "end_date"}, inplace=True)
+    df["start_date"] = df["end_date"] - pd.Timedelta(hours=1)
+    columns = df.columns.tolist()
+    columns.remove("value")
+    columns.insert(2, "value")
+    df = df.loc[:, columns]
 
     return df.reset_index(drop=True)
