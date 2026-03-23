@@ -435,7 +435,7 @@ def fetch_weather_all_departments(
         "hourly":        ",".join(variables),
         "past_days":     past_days,
         "forecast_days": 1,             # include today's partial data
-        "timezone":      "Europe/Paris",
+        "timezone":      "UTC",
         "wind_speed_unit":    "kmh",
         "precipitation_unit": "mm",
     }
