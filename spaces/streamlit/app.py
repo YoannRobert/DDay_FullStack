@@ -26,6 +26,8 @@ st.header("Application de prédiction de consommation électrique")
 
 st.divider()
 
+st.write('from DDAY github')
+
 
 # Session State
 default_start_date = datetime.date(2021, 1, 1)
