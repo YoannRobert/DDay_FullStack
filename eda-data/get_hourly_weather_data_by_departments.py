@@ -384,41 +384,24 @@ def get_departments(use_fallback: bool = False) -> list[DepartmentRecord]:
 
 
 # ===========================================================================
-# 5. Last completed hour
-# ===========================================================================
-
-def last_completed_hour() -> datetime:
-    """
-    Return the most recently completed hour (minutes=0, seconds=0) strictly
-    before the current wall-clock time.
-
-    Examples:
-        Current time 14:37 -> returns 14:00 of the same day
-        Current time 09:00:00 exactly -> returns 08:00 (strictly before)
-    """
-    now          = datetime.now()
-    current_hour = now.replace(minute=0, second=0, microsecond=0)
-    if now == current_hour:
-        return current_hour - timedelta(hours=1)
-    return current_hour
-
-
-# ===========================================================================
 # 6. Single multi-location API call
 # ===========================================================================
 
 def fetch_weather_all_departments(
-    departments: list[DepartmentRecord],
-    past_days:   int,
-    variables:   list[str] = HOURLY_VARIABLES,
+    departments:   list[DepartmentRecord],
+    past_days:     int,
+    forecast_days: int = 3,
+    variables:     list[str] = HOURLY_VARIABLES,
 ) -> list[dict]:
     """
     Fetch all hourly weather variables for all departments in a single
     Open-Meteo multi-location API call (up to 1 000 coordinates).
 
     Args:
-        departments : List of DepartmentRecord (94 entries).
-        past_days   : Number of past days to retrieve (max 92).
+        departments   : List of DepartmentRecord (94 entries).
+        past_days     : Number of past days to retrieve (max 92).
+        forecast_days : Number of forecast days to include (default: 3).
+        variables     : List of Open-Meteo hourly variable names to request.
 
     Returns:
         List of per-location result dicts (same order as departments).
@@ -434,14 +417,15 @@ def fetch_weather_all_departments(
         "longitude":     lons,
         "hourly":        ",".join(variables),
         "past_days":     past_days,
-        "forecast_days": 1,             # include today's partial data
+        "forecast_days": forecast_days,
         "timezone":      "UTC",
         "wind_speed_unit":    "kmh",
         "precipitation_unit": "mm",
     }
 
     print(f"[Open-Meteo] Fetching {len(variables)} variable(s) for "
-          f"{len(departments)} departments (past_days={past_days})...")
+          f"{len(departments)} departments "
+          f"(past_days={past_days}, forecast_days={forecast_days})...")
     response = requests.get(OPEN_METEO_FORECAST_URL, params=params, timeout=60)
     response.raise_for_status()
     data = response.json()
@@ -457,14 +441,12 @@ def fetch_weather_all_departments(
 def build_records(
     departments: list[DepartmentRecord],
     api_results: list[dict],
-    cutoff:      datetime,
 ) -> list[dict]:
     """
-    Build one flat dict per (department, completed hour) pair.
+    Build one flat dict per (department, hourly timestamp) pair.
 
-    Only completed-hour timestamps (minutes=0, seconds=0) at or before
-    `cutoff` are included. Missing API values are left as None, which pandas
-    converts to NaN — the standard representation for missing numeric data.
+    All timestamps returned by the API are included (past and forecast).
+    Missing API values are left as None, which pandas converts to NaN.
 
     Derived fields added:
       - "Weather"          : human-readable WMO label (None if weather_code absent)
@@ -474,10 +456,9 @@ def build_records(
     Args:
         departments : Ordered list of DepartmentRecord matching api_results.
         api_results : Per-location dicts from the Open-Meteo response.
-        cutoff      : Last completed hour; later timestamps are discarded.
 
     Returns:
-        Flat list of dicts sorted by department code then timestamp.
+        Flat list of dicts, one per (department, timestamp).
     """
     records: list[dict] = []
 
@@ -516,17 +497,6 @@ def build_records(
         freezing_lvl   = col("freezing_level_height")
 
         for i, ts_str in enumerate(times):
-            try:
-                ts = datetime.fromisoformat(ts_str)
-            except ValueError:
-                continue
-
-            # Keep only completed hours at or before the cutoff
-            if ts.minute != 0 or ts.second != 0:
-                continue
-            if ts > cutoff:
-                continue
-
             sun_s   = sunshine_s[i]
             sun_min = round(sun_s / 60, 1) if sun_s is not None else None
 
@@ -575,33 +545,34 @@ def build_records(
 # ===========================================================================
 
 def fetch_department_weather(
-    days:         int             | None = None,
-    use_fallback: bool                   = False,
-    export_csv:   bool                   = False,
-    weather_data: str | list[str]        = "temperature_2m",
+    past_days:     int             | None = None,
+    forecast_days: int             | None = None,
+    use_fallback:  bool                   = False,
+    export_csv:    bool                   = False,
+    weather_data:  str | list[str]        = "temperature_2m",
 ) -> pd.DataFrame:
     """
-    Fetch all hourly weather variables for all 94 metropolitan French
-    departments (excl. Corsica) over the last N days, and export to one CSV.
+    Fetch hourly weather data for all 94 metropolitan French departments
+    (excl. Corsica), covering the last past_days days and the next
+    forecast_days days. A single Open-Meteo /v1/forecast multi-location
+    request covers all 94 prefectures at once.
 
-    A single Open-Meteo /v1/forecast multi-location request covers all 94
-    prefectures at once. Missing values (forecast-only variables for past
+    Timestamps are in UTC. Missing values (forecast-only variables for past
     timestamps) are represented as NaN in the output DataFrame and CSV.
 
     Can be called from Python or the command line. CLI arguments take priority.
 
     Args:
-        days         : Number of past days to fetch (default: 35, max: 92).
-        use_fallback : Skip Wikidata and use the embedded INSEE 2021 dataset.
-        weather_data : Variable(s) to fetch. Accepts a single variable name (str)
-                       or a list of variable names (list[str]).
-                       Default: "temperature_2m". All valid Open-Meteo hourly
-                       variable names are accepted (see HOURLY_VARIABLES for
-                       the full list used in the original script).
+        past_days     : Number of past days to fetch (default: 35, max: 92).
+        forecast_days : Number of forecast days to include (default: 1).
+        use_fallback  : Skip Wikidata and use the embedded INSEE 2021 dataset.
+        export_csv    : If True, export the result to a timestamped CSV file.
+        weather_data  : Variable(s) to fetch. Accepts a single variable name (str)
+                        or a list of variable names (list[str]).
+                        Default: "temperature_2m".
 
     Returns:
-        DataFrame with one row per (department, completed hour).
-        Also writes the DataFrame to weather_data_departments_{YYYYMMDD_hhmmss}.csv.
+        DataFrame with one row per (department, timestamp).
     """
     # ------------------------------------------------------------------
     # CLI argument parsing
@@ -613,8 +584,12 @@ def fetch_department_weather(
         )
     )
     parser.add_argument(
-        "--days", type=int, default=None,
+        "--past-days", type=int, default=None,
         help=f"Number of past days to fetch (default: 35, max: {MAX_PAST_DAYS})"
+    )
+    parser.add_argument(
+        "--forecast-days", type=int, default=None,
+        help="Number of forecast days to include (default: 3)"
     )
     parser.add_argument(
         "--use-fallback", action="store_true", default=False,
@@ -626,24 +601,26 @@ def fetch_department_weather(
     )
     cli_args, _ = parser.parse_known_args()
 
-    days         = max(1, min(
-        cli_args.days if cli_args.days is not None else (days or 35),
+    past_days     = max(1, min(
+        cli_args.past_days if cli_args.past_days is not None else (past_days or 35),
         MAX_PAST_DAYS,
     ))
-    use_fallback = cli_args.use_fallback or use_fallback
-    export_csv   = cli_args.export_csv or export_csv
+    forecast_days = max(1,
+        cli_args.forecast_days if cli_args.forecast_days is not None else (forecast_days or 3)
+    )
+    use_fallback  = cli_args.use_fallback or use_fallback
+    export_csv    = cli_args.export_csv or export_csv
     resolved_variables: list[str] = (
         [weather_data] if isinstance(weather_data, str) else list(weather_data)
     )
 
-    run_ts   = datetime.now()
-    cutoff   = last_completed_hour()
-    ts_str   = run_ts.strftime("%Y%m%d_%H%M%S")
+    run_ts = datetime.now()
+    ts_str = run_ts.strftime("%Y%m%d_%H%M%S")
 
     print("=" * 65)
-    print(f"  France Department Weather — {len(resolved_variables)} variable(s) — last {days} day(s)")
-    print(f"  Cutoff : {cutoff.strftime('%Y-%m-%dT%H:%M')} (last completed hour)")
-    print(f"  Run    : {run_ts.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  France Department Weather — {len(resolved_variables)} variable(s)")
+    print(f"  Past: {past_days} day(s) | Forecast: {forecast_days} day(s) | Timezone: UTC")
+    print(f"  Run : {run_ts.strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 65)
 
     # ------------------------------------------------------------------
@@ -656,7 +633,7 @@ def fetch_department_weather(
     # Step 2 — Single multi-location API call
     # ------------------------------------------------------------------
     try:
-        api_results = fetch_weather_all_departments(departments, days, resolved_variables)
+        api_results = fetch_weather_all_departments(departments, past_days, forecast_days, resolved_variables)
     except requests.RequestException as exc:
         print(f"[ERROR] Open-Meteo API call failed: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -664,9 +641,9 @@ def fetch_department_weather(
     print(f"[OK] API response received ({len(api_results)} location(s)).")
 
     # ------------------------------------------------------------------
-    # Step 3 — Build flat records, filter to completed hours ≤ cutoff
+    # Step 3 — Build flat records (all timestamps, past + forecast)
     # ------------------------------------------------------------------
-    records = build_records(departments, api_results, cutoff)
+    records = build_records(departments, api_results)
 
     if not records:
         print("[WARNING] No records produced. Check past_days or timezone settings.")

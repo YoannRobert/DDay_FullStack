@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from aggregate_to_hourly import aggregate_to_hourly
 
-def fetch_consumption_data(days: int = 35, margin_days: int = 1):
+def fetch_consumption_data(past_days: int = 35, margin_days: int = 1):
 
     load_dotenv()
 
@@ -19,8 +19,8 @@ def fetch_consumption_data(days: int = 35, margin_days: int = 1):
     token_oauth = data["access_token"]
 
     end_date = dt.datetime.now(tz=dt.timezone.utc).replace(minute=0, second=0, microsecond=0)
-    start_date = end_date - dt.timedelta(days=days)
-    start_date_with_margin = end_date - dt.timedelta(days=days + margin_days)
+    start_date = end_date - dt.timedelta(days=past_days)
+    start_date_with_margin = end_date - dt.timedelta(days=past_days + margin_days)
     end_date_str = end_date.isoformat()
     start_date_with_margin_str = start_date_with_margin.isoformat()
 
