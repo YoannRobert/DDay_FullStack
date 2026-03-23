@@ -2,6 +2,7 @@ import pandas as pd
 from get_hourly_consumption_data import fetch_consumption_data
 from get_hourly_weather_data_by_departments import fetch_department_weather
 
+
 def get_dataset(past_days: int = 35):
     consumption_data = fetch_consumption_data(past_days=past_days)[["start_date", "end_date", "value"]]
     weather_data = fetch_department_weather(past_days=past_days)[["Department Code", "Timestamp", "Temperature (°C)"]]
@@ -26,6 +27,11 @@ def get_dataset(past_days: int = 35):
     ).reset_index()
 
     df = pd.merge(consumption_data, weather_data_grouped_by_timestamp, left_on='end_date', right_on="Timestamp", how='right')
+
+    first_valid = df["value"].first_valid_index()
+    if first_valid is not None:
+        df = df.loc[first_valid:]
+
     df.drop(columns=['end_date'], inplace=True, axis=1)
     df.rename(columns={"Timestamp": "end_date"}, inplace=True)
     df["start_date"] = df["end_date"] - pd.Timedelta(hours=1)
