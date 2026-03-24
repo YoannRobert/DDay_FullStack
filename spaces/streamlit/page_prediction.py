@@ -62,7 +62,7 @@ max_power = df2['consumption_MW'].max()
 # calculate metrics for the previous period
 previous_day = st.session_state.pred_start_date - datetime.timedelta(days=1)
 mask_previous_start = (df['start_date_fr'].dt.date >= previous_day) 
-mask_previous_end = (df['end_date_fr'].dt.date <= previous_day)
+mask_previous_end = (df['start_date_fr'].dt.date <= previous_day)
 df_previous = df[mask_previous_start & mask_previous_end]
 mean_power_previous = df_previous['consumption_MW'].mean()
 min_power_previous = df_previous['consumption_MW'].min()
