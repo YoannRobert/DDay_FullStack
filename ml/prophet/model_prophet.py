@@ -66,17 +66,31 @@ class ConsumptionPrediction():
         df['end_date_fr'] = df['end_date'].dt.tz_convert('Europe/Paris')
 
         # Last date with row not NaN
-        train_end_date = df[df['consumption_MW'].notna()]['end_date'].max().date()
+        self.train_end_date = df[df['consumption_MW'].notna()]['end_date'].max().date()
         # 30 days before
-        train_start_date = train_end_date - timedelta(days=30)
+        self.train_start_date = self.train_end_date - timedelta(days=30)
+        # hook to modify train date if needed
+        self.hook_train_date()
 
-        mask_train = (df['start_date_fr'].dt.date >= train_start_date) & (df['start_date_fr'].dt.date <= train_end_date)
+        mask_train = (df['start_date_fr'].dt.date >= self.train_start_date) & (df['start_date_fr'].dt.date <= self.train_end_date)
         df_train = df[mask_train]
 
-        df_prod = df[df['start_date_fr'].dt.date == (train_end_date + timedelta(days=1))]
+        df_prod = df[df['start_date_fr'].dt.date == (self.train_end_date + timedelta(days=1))]
 
         self.train_set = self.convert_df_to_prophet(df_train)
         self.prod_set = self.convert_df_to_prophet(df_prod)
+
+    def hook_train_date(self):
+        """
+        Permet de modifier la date de début et de fin d'entraînement
+        Pour rattraper des prévisions dans le passé
+        ou rejouer des prévisions (mise à jour de prévisions existantes)
+        """
+        prediction_delay = int(os.environ.get('PREDICTION_DELAY'))
+        if prediction_delay > 0:
+            self.train_end_date = self.train_end_date - timedelta(days=prediction_delay)
+            self.train_start_date = self.train_start_date - timedelta(days=prediction_delay)
+
 
     # conversion pour prophet
     def convert_df_to_prophet(self, df):
@@ -115,20 +129,46 @@ class ConsumptionPrediction():
             # log
             pass
 
-        self.predictions = prod_pred[['ds', 'yhat']]
+        self.new_predictions = prod_pred[['ds', 'yhat']]
         #df_pred.to_csv(os.getenv('DATA_STORAGE') + 'prophet_predictions.csv', index=False)
 
 
     def save_predictions(self):
 
+        predictions = self.prepare_prediction_for_new()
+        #concatenate with new_predictions
+        predictions = pd.concat([predictions, self.new_predictions], ignore_index=True)
+        # sort by ds ascending
+        predictions = predictions.sort_values('ds', ascending=True)
+
+        
         csv_buffer = StringIO()
-        self.predictions.to_csv(csv_buffer, index=False)
+        predictions.to_csv(csv_buffer, index=False)
 
         self.s3_client.put_object(
             Bucket=os.environ.get('AWS_BUCKET'),
             Key="dataset/predictions.csv",
             Body=csv_buffer.getvalue(),
         )
+        predictions.to_csv('predictions.csv', index=False)
+
+    def prepare_prediction_for_new(self):
+        """
+        Prepare predictions for new data by removing predictions from the same date (already predicted)
+        """
+        predictions = self.load_predictions_data()
+        
+        # Convertir les dates des prédictions existantes au même format que new_predictions
+        predictions['ds'] = pd.to_datetime(predictions['ds'])
+        
+        # Obtenir les dates des nouvelles prédictions
+        new_prediction_dates = pd.to_datetime(self.new_predictions['ds']).dt.date
+        
+        # Supprimer les prédictions existantes qui ont les mêmes dates que les nouvelles
+        mask_keep = ~predictions['ds'].dt.date.isin(new_prediction_dates)
+        predictions = predictions[mask_keep]
+        
+        return predictions[['ds', 'yhat']]
 
     def run(self):
         try:
