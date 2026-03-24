@@ -1,5 +1,5 @@
-from get_hourly_consumption_data import fetch_consumption_data
-from get_hourly_weather_data_by_departments import fetch_department_weather
+from etl.get_hourly_consumption_data import fetch_consumption_data
+from etl.get_hourly_weather_data_by_departments import fetch_department_weather
 
 
 def extract_datasets(past_days: int = 35):

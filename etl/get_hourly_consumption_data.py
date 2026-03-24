@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import os
 from dotenv import load_dotenv
-from aggregate_to_hourly import aggregate_to_hourly
+from etl.aggregate_to_hourly import aggregate_to_hourly
 
 def fetch_consumption_data(past_days: int = 35, margin_days: int = 1):
 

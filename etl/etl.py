@@ -1,6 +1,6 @@
-from extract import extract_datasets
-from transform import transform_datasets
-from load import load_dataset
+from etl.extract import extract_datasets
+from etl.transform import transform_datasets
+from etl.load import load_dataset
 
 
 def extract_transform_load(bucket : str, key : str, region : str = "eu-west-3", past_days: int = 35) -> None:
