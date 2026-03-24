@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 import plotly.express as px
-import datetime
+from datetime import timedelta
 from dotenv import load_dotenv
 import utils
 import os
@@ -42,6 +42,10 @@ data_end_date = df_recent['end_date'].max().date()
 default_start_date = data_end_date
 default_end_date = data_end_date
 
+# select_period
+if "select_period" not in st.session_state:
+    st.session_state.select_period = 'J-1'
+
 # start_datetime of data
 if "pred_start_date" not in st.session_state:
     st.session_state.pred_start_date = default_start_date
@@ -51,8 +55,21 @@ if "pred_end_date" not in st.session_state:
     st.session_state.pred_end_date = default_end_date
 
 mask_start_date = (df['start_date_fr'].dt.date >= st.session_state.pred_start_date) 
-mask_end_date = (df['end_date_fr'].dt.date <= st.session_state.pred_end_date)
+mask_end_date = (df['start_date_fr'].dt.date <= st.session_state.pred_end_date)
 df2 = df[mask_start_date & mask_end_date]
+
+#
+def set_j_value():
+    select_period = st.session_state.select_period
+    if select_period == 'J-1':
+        n_days = 0
+    elif select_period == 'J-3':
+        n_days = 2
+    elif select_period == 'J-7':
+        n_days = 6
+
+    st.session_state.pred_start_date = default_start_date - timedelta(days=n_days)
+
 
 # Calculate metrics for the selected period
 mean_power = df2['consumption_MW'].mean()
@@ -60,7 +77,7 @@ min_power = df2['consumption_MW'].min()
 max_power = df2['consumption_MW'].max()
 
 # calculate metrics for the previous period
-previous_day = st.session_state.pred_start_date - datetime.timedelta(days=1)
+previous_day = st.session_state.pred_start_date - timedelta(days=1)
 mask_previous_start = (df['start_date_fr'].dt.date >= previous_day) 
 mask_previous_end = (df['start_date_fr'].dt.date <= previous_day)
 df_previous = df[mask_previous_start & mask_previous_end]
@@ -71,6 +88,7 @@ max_power_previous = df_previous['consumption_MW'].max()
 delta_mean_power = mean_power - mean_power_previous
 delta_min_power = min_power - min_power_previous
 delta_max_power = max_power - max_power_previous
+
 
 
 
@@ -93,6 +111,19 @@ with col2_stats:
     st.metric("Puissance minimale", f"{min_power:.2f} MW", f"{delta_min_power:.2f} MW", border=True)
 with col3_stats:
     st.metric("Puissance maximale", f"{max_power:.2f} MW", f"{delta_max_power:.2f} MW", border=True)
+
+
+###############################################
+# Filtre période
+option_days_selection = [ 'J-1', 'J-3', 'J-7']
+
+page = st.pills(
+    "",
+    key="select_period",
+    options=option_days_selection,
+    selection_mode="single",  # un seul sélectionnable à la fois
+    on_change=set_j_value
+)
 
 
 ################################################
