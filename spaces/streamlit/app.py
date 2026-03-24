@@ -19,6 +19,8 @@ st.html(
     """
 )
 
+print("AWS_BUCKET =", repr(os.environ.get("AWS_BUCKET")))
+
 
 st.header("Application de prédiction de consommation électrique")
 
