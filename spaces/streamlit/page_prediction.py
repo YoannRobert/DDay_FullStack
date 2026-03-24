@@ -12,10 +12,11 @@ load_dotenv()
 
 st.set_page_config(layout="wide")
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_recent_dataset():
     return utils.load_dataset_s3("dataset/training_dataset.csv")
 
+@st.cache_data(ttl=3600)
 def load_prediction_dataset():
     return utils.load_dataset_s3("dataset/predictions.csv")
 
@@ -76,20 +77,38 @@ mean_power = df2['consumption_MW'].mean()
 min_power = df2['consumption_MW'].min()
 max_power = df2['consumption_MW'].max()
 
-# calculate metrics for the previous period
-previous_day = st.session_state.pred_start_date - timedelta(days=1)
-mask_previous_start = (df['start_date_fr'].dt.date >= previous_day) 
-mask_previous_end = (df['start_date_fr'].dt.date <= previous_day)
-df_previous = df[mask_previous_start & mask_previous_end]
-mean_power_previous = df_previous['consumption_MW'].mean()
-min_power_previous = df_previous['consumption_MW'].min()
-max_power_previous = df_previous['consumption_MW'].max()
-
-delta_mean_power = mean_power - mean_power_previous
-delta_min_power = min_power - min_power_previous
-delta_max_power = max_power - max_power_previous
+# calculate metrics for predictions if all in the period
+mask_pred = df_pred['ds_fr'].dt.date >= st.session_state.pred_start_date
+df_pred2 = df_pred[mask_pred].iloc[1:,:]
+mean_power_pred = df_pred2['yhat'].mean()
+min_power_pred = df_pred2['yhat'].min()
+max_power_pred = df_pred2['yhat'].max()
 
 
+#previous_day = st.session_state.pred_start_date - timedelta(days=1)
+#mask_previous_start = (df['start_date_fr'].dt.date >= previous_day) 
+#mask_previous_end = (df['start_date_fr'].dt.date <= previous_day)
+#df_previous = df[mask_previous_start & mask_previous_end]
+#mean_power_previous = df_previous['consumption_MW'].mean()
+#min_power_previous = df_previous['consumption_MW'].min()
+#max_power_previous = df_previous['consumption_MW'].max()
+
+delta_mean_power = mean_power_pred - mean_power
+delta_min_power = min_power_pred - min_power
+delta_max_power = max_power_pred - max_power
+
+
+st.html("""
+<style>
+    div.st-key-mean_metrics, div.st-key-min_metrics, div.st-key-max_metrics {
+        min-height: 135px !important;
+    }
+    div.st-key-min_metrics [data-testid="stMetricValue"],
+    div.st-key-max_metrics [data-testid="stMetricValue"] {
+    font-size: 24px !important;
+    }
+</style>
+""")
 
 
 ###############################################
@@ -103,37 +122,63 @@ else:
 ###############################################
 # Metrics power
 
-col1_stats, col2_stats, col3_stats = st.columns(3)
+col1_metrics, col2_metrics, col3_metrics = st.columns((4,2,2))
 
-with col1_stats:
-    st.metric("Puissance moyenne", f"{mean_power:.2f} MW", f"{delta_mean_power:.2f} MW", border=True)
-with col2_stats:
-    st.metric("Puissance minimale", f"{min_power:.2f} MW", f"{delta_min_power:.2f} MW", border=True)
-with col3_stats:
-    st.metric("Puissance maximale", f"{max_power:.2f} MW", f"{delta_max_power:.2f} MW", border=True)
+with col1_metrics:
+    with st.container(border=True, key="mean_metrics"):
+        col11_prod, col12_pred = st.columns(2)
+        with col11_prod:
+            st.metric("Puissance moyenne", f"{mean_power:.2f} MW")
+        with col12_pred:
+            st.metric("Prédiction moyenne", f"{mean_power_pred:.2f} MW", f"{delta_mean_power:.2f} MW")
+
+with col2_metrics:
+    with st.container(border=True, key="min_metrics"):
+        col21_prod, col22_pred = st.columns(2)
+        with col21_prod:
+            st.metric("Puissance minimale", f"{min_power:.2f} MW")
+        with col22_pred:
+            st.metric("Prédiction minimale", f"{min_power_pred:.2f} MW", f"{delta_min_power:.2f} MW")
+
+with col3_metrics:
+    with st.container(border=True, key="max_metrics"):
+        col31_prod, col32_pred = st.columns(2)
+        with col31_prod:
+            st.metric("Puissance maximale", f"{max_power:.2f} MW")
+        with col32_pred:
+            st.metric("Prédiction maximale", f"{max_power_pred:.2f} MW", f"{delta_max_power:.2f} MW")
+
+##############################################
 
 
 ###############################################
 # Filtre période
 option_days_selection = [ 'J-1', 'J-3', 'J-7']
 
-page = st.pills(
-    "",
-    key="select_period",
-    options=option_days_selection,
-    selection_mode="single",  # un seul sélectionnable à la fois
-    on_change=set_j_value
-)
+col1_btn, col2_btn = st.columns(2, vertical_alignment="bottom")
+with col1_btn:
+    st.pills(
+        "",
+        key="select_period",
+        options=option_days_selection,
+        selection_mode="single",  # un seul sélectionnable à la fois
+        on_change=set_j_value
+    )
+with col2_btn:
+    # Clear cache
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if st.button("", icon=":material/refresh:", help="Actualiser les données"):
+            st.cache_data.clear()
 
 
 ################################################
 # Chart
-
 fig = px.line(df2, x='end_date_fr', y='consumption_MW',
     title=f"Puissance électrique consommée et prédictions en MW",
     labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'})
-fig.add_trace( px.scatter(df_pred, x='ds_fr', y='yhat').data[0] )
+fig.add_trace( px.scatter(df_pred2, x='ds_fr', y='yhat').data[0] )
 fig.data[1].marker = dict(color='green', size=5)
 
 with st.container(border=1):
     st.plotly_chart(fig)
+
