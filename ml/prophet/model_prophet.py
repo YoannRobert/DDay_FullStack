@@ -65,6 +65,10 @@ class ConsumptionPrediction():
         df['start_date_fr'] = df['start_date'].dt.tz_convert('Europe/Paris')
         df['end_date_fr'] = df['end_date'].dt.tz_convert('Europe/Paris')
 
+        # weekend
+        df['is_weekday'] = (df['start_date_fr'].dt.weekday < 5).astype(int)  # 1 lundi-ven, 0 sinon
+        df['is_weekend'] = (df['start_date_fr'].dt.weekday >= 5).astype(int)  # 1 sam-dim, 0 sinon 
+
         # Last date with row not NaN
         self.train_end_date = df[df['consumption_MW'].notna()]['end_date'].max().date()
         # 30 days before
@@ -105,14 +109,34 @@ class ConsumptionPrediction():
     def train_predict(self, verbose=True):
 
         # train model
-        model = Prophet(**self.hyperparameters)
+        model = Prophet(
+                weekly_seasonality=False,  # Désactive la weekly par défaut
+                daily_seasonality=True,     # Garde daily pour tes données horaires
+                **self.hyperparameters)
+        
         if len(self.regressors) > 0:
             for regressor in self.regressors:
                 model.add_regressor(regressor)
+        
+        # Saisonnalité hebdo pour weekdays
+        model.add_seasonality(
+            name='weekly_weekday',
+            period=7,
+            fourier_order=3,
+            condition_name='is_weekday'
+        )
+        # Saisonnalité hebdo pour weekends
+        model.add_seasonality(
+            name='weekly_weekend',
+            period=7,
+            fourier_order=3,
+            condition_name='is_weekend'
+        )
+
         model.fit(self.train_set)
 
         # predict
-        fields = ['ds'] + self.regressors
+        fields = ['ds'] + self.regressors + ['is_weekday', 'is_weekend']
         train_pred = model.predict(self.train_set[fields])
         prod_pred = model.predict(self.prod_set[fields])
 
@@ -150,7 +174,6 @@ class ConsumptionPrediction():
             Key="dataset/predictions.csv",
             Body=csv_buffer.getvalue(),
         )
-        predictions.to_csv('predictions.csv', index=False)
 
     def prepare_prediction_for_new(self):
         """
