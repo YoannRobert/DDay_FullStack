@@ -98,11 +98,11 @@ with col3_stats:
 ################################################
 # Chart
 
-mask_chart = (df['start_date_fr'].dt.date >= st.session_state.pred_start_date) & (df['end_date_fr'].dt.date <= st.session_state.pred_end_date)
-
-fig = px.line(df_recent[mask_chart], x='start_date_fr', y='consumption_MW',
-    title=f"Production d'électricité et prédictions en MW")
+fig = px.line(df2, x='end_date_fr', y='consumption_MW',
+    title=f"Puissance électrique consommée et prédictions en MW",
+    labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'})
 fig.add_trace( px.scatter(df_pred, x='ds_fr', y='yhat').data[0] )
+fig.data[1].marker = dict(color='green', size=5)
 
 with st.container(border=1):
     st.plotly_chart(fig)
