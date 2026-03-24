@@ -1,6 +1,6 @@
-pandas>=1.5.0
-streamlit>=1.28.0
-numpy>=1.24.0
-plotly>=5.15.0
-python-dotenv>=1.0.0
-protobuf==3.20.3
+pandas==2.3.3
+streamlit==1.50.0
+numpy==1.26.0
+plotly==6.6.0
+python-dotenv==1.2.2
+boto3==1.42.59
