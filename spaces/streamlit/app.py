@@ -19,15 +19,13 @@ st.html(
     """
 )
 
-print("AWS_BUCKET =", repr(os.environ.get("AWS_BUCKET")))
-
 
 st.header("Application de prédiction de consommation électrique")
 
 st.divider()
 
+page_prediction = st.Page("page_prediction.py", title="Prédiction", icon=":material/model_training:")
 page_historic = st.Page("page_historic.py", title="Historique", icon=":material/history:")
-page_prediction = st.Page("page_prediction.py", title="Prédiction", icon=":material/thumb_up:")
 
-pg = st.navigation([page_historic, page_prediction])
+pg = st.navigation([page_prediction, page_historic])
 pg.run()

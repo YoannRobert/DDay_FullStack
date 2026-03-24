@@ -43,15 +43,15 @@ default_start_date = data_end_date
 default_end_date = data_end_date
 
 # start_datetime of data
-if "start_date" not in st.session_state:
-    st.session_state.start_date = default_start_date
+if "pred_start_date" not in st.session_state:
+    st.session_state.pred_start_date = default_start_date
 
 # end_datetime of data
-if "end_date" not in st.session_state:
-    st.session_state.end_date = default_end_date
+if "pred_end_date" not in st.session_state:
+    st.session_state.pred_end_date = default_end_date
 
-mask_start_date = (df['start_date_fr'].dt.date >= st.session_state.start_date) 
-mask_end_date = (df['end_date_fr'].dt.date <= st.session_state.end_date)
+mask_start_date = (df['start_date_fr'].dt.date >= st.session_state.pred_start_date) 
+mask_end_date = (df['end_date_fr'].dt.date <= st.session_state.pred_end_date)
 df2 = df[mask_start_date & mask_end_date]
 
 # Calculate metrics for the selected period
@@ -76,10 +76,10 @@ delta_max_power = max_power - max_power_previous
 
 ###############################################
 # Subtitle
-if st.session_state.start_date == st.session_state.end_date:
-    st.subheader(f"Puissance électrique consommée le {st.session_state.start_date.strftime('%d/%m/%Y')}")
+if st.session_state.pred_start_date == st.session_state.pred_end_date:
+    st.subheader(f"Puissance électrique consommée le {st.session_state.pred_start_date.strftime('%d/%m/%Y')}")
 else:
-    st.subheader(f"Puissance électrique consommée entre le {st.session_state.start_date.strftime('%d/%m/%Y')} et le {st.session_state.end_date.strftime('%d/%m/%Y')}")
+    st.subheader(f"Puissance électrique consommée entre le {st.session_state.pred_start_date.strftime('%d/%m/%Y')} et le {st.session_state.pred_end_date.strftime('%d/%m/%Y')}")
 
 
 ###############################################
@@ -98,7 +98,7 @@ with col3_stats:
 ################################################
 # Chart
 
-mask_chart = (df['start_date_fr'].dt.date >= st.session_state.start_date) & (df['end_date_fr'].dt.date <= st.session_state.end_date)
+mask_chart = (df['start_date_fr'].dt.date >= st.session_state.pred_start_date) & (df['end_date_fr'].dt.date <= st.session_state.pred_end_date)
 
 fig = px.line(df_recent[mask_chart], x='start_date_fr', y='consumption_MW',
     title=f"Production d'électricité et prédictions en MW")
