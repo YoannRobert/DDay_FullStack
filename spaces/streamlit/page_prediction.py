@@ -84,15 +84,6 @@ mean_power_pred = df_pred2['yhat'].mean()
 min_power_pred = df_pred2['yhat'].min()
 max_power_pred = df_pred2['yhat'].max()
 
-
-#previous_day = st.session_state.pred_start_date - timedelta(days=1)
-#mask_previous_start = (df['start_date_fr'].dt.date >= previous_day) 
-#mask_previous_end = (df['start_date_fr'].dt.date <= previous_day)
-#df_previous = df[mask_previous_start & mask_previous_end]
-#mean_power_previous = df_previous['consumption_MW'].mean()
-#min_power_previous = df_previous['consumption_MW'].min()
-#max_power_previous = df_previous['consumption_MW'].max()
-
 delta_mean_power = mean_power_pred - mean_power
 delta_min_power = min_power_pred - min_power
 delta_max_power = max_power_pred - max_power
@@ -175,9 +166,12 @@ with col2_btn:
 # Chart
 fig = px.line(df2, x='end_date_fr', y='consumption_MW',
     title=f"Puissance électrique consommée et prédictions en MW",
-    labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'})
-fig.add_trace( px.scatter(df_pred2, x='ds_fr', y='yhat').data[0] )
-fig.data[1].marker = dict(color='green', size=5)
+    labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'},)
+fig.add_trace( px.line(df_pred2, x='ds_fr', y='yhat',).data[0] )
+
+fig.data[0].update({'name':'Consommation'})
+fig.data[1].update({'line':dict(dash='dash', color="green"), 'name':'Prédiction'})
+fig.update_traces(showlegend = True)
 
 with st.container(border=1):
     st.plotly_chart(fig)
