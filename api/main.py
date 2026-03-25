@@ -23,6 +23,6 @@ async def index():
     except:
         return 'There was an error while predicting'
 
-    return 'predicition.csv created on S3 bucket'
+    return 'predictions.csv created on S3 bucket'
 
-uvicorn.run(app, host="0.0.0.0", port=4000)
+uvicorn.run(app, host="0.0.0.0", port=8000)
