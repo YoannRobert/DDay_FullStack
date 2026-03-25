@@ -208,3 +208,6 @@ __marimo__/
 
 # Mac OS files
 .DS_Store
+
+# Files generated on AWS EC2 instance (hosting the API)
+requirements-api.txt

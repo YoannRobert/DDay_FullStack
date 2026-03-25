@@ -1,5 +1,6 @@
-FROM continuumio/miniconda3
 
+FROM python:3.10-slim
+ 
 # --- Dépendances système ---
 # build-essential / gcc / g++ : compilation de Prophet (pystan) et pmdarima
 # libgomp1                    : OpenMP requis par XGBoost et Prophet
@@ -11,26 +12,30 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
-
+ 
 WORKDIR /app
-
-# --- Création de l'environnement Conda ---
-# On copie d'abord les fichiers de config pour exploiter le cache Docker :
-# tant que ces fichiers ne changent pas, cette couche n'est pas reconstruite.
-COPY environment.yml requirements.txt pyproject.toml ./
-
-RUN conda env create -f environment.yml \
-    && conda clean -afy
-
-# --- Activation de l'environnement Conda dans tous les RUN / CMD suivants ---
-SHELL ["/bin/bash", "--login", "-c"]
-ENV PATH="/opt/conda/envs/dday/bin:$PATH"
-
+ 
+# --- Génération de requirements-api.txt depuis environment.yml ---
+# PyYAML est nécessaire pour exécuter le script de génération.
+# On copie uniquement les fichiers nécessaires à cette étape pour exploiter le cache Docker.
+COPY environment.yml requirements.txt pyproject.toml generate_requirements_api.py ./
+ 
+RUN pip install --no-cache-dir pyyaml \
+    && python generate_requirements_api.py
+ 
+# --- Installation des dépendances Python ---
+RUN pip install --no-cache-dir -r requirements-api.txt
+ 
+# --- Installation du projet en mode éditable ---
+# Rend les imports absolus fonctionnels (from etl.etl import ...)
+# depuis api/main.py, exactement comme -e . dans environment.yml.
+RUN pip install --no-cache-dir -e .
+ 
 # --- Copie du code source ---
 COPY . .
-
+ 
 EXPOSE 8000
-
+ 
 # main.py se trouve dans le sous-dossier api/
-# On utilise le Python de l'environnement Conda "dday" (via PATH ci-dessus)
 CMD ["python", "api/main.py"]
+ 
