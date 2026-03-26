@@ -6,15 +6,15 @@ Requires=docker.service
 [Service]
 Restart=always
 RestartSec=10
-ExecStartPre=-/usr/bin/docker stop fastapi-app
-ExecStartPre=-/usr/bin/docker rm fastapi-app
+ExecStartPre=-/usr/bin/docker stop api-demo-day-app
+ExecStartPre=-/usr/bin/docker rm api-demo-day-app
 ExecStart=/usr/bin/docker run \
-    --name fastapi-app \
+    --name api-demo-day-app \
     --env-file /home/ubuntu/.env \
     -p 8000:8000 \
-    fastapi-app:latest
+    api-demo-day:latest
 
-ExecStop=/usr/bin/docker stop fastapi-app
+ExecStop=/usr/bin/docker stop api-demo-day-app
 
 [Install]
 WantedBy=multi-user.target
