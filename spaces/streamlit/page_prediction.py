@@ -162,9 +162,10 @@ with col2_btn:
             st.cache_data.clear()
 
 
+
 ################################################
 # Chart
-fig = px.line(df2, x='end_date_fr', y='consumption_MW',
+fig = px.line(df2, x='end_date_fr', y='consumption_MW', range_y=[20000, None],
     title=f"Puissance électrique consommée et prédictions en MW",
     labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'},)
 fig.add_trace( px.line(df_pred2, x='ds_fr', y='yhat',).data[0] )
