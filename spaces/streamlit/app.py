@@ -38,7 +38,7 @@ with st.sidebar:
         with st.spinner("Chargement en cours..."):
             try:
                 sleep(2)
-                response = requests.get("${PREDICTION_API_URL}/predict")  # Remplacez par votre URL
+                response = requests.get(f"{PREDICTION_API_URL}/predict")  # Remplacez par votre URL
                 if response.status_code == 200:
                     st.sidebar.success("Prédiction effectuée avec succès !")
                     #st.sidebar.json(response.json())  # Affiche la réponse
