@@ -9,6 +9,8 @@ import os
 
 load_dotenv()
 
+PREDICTION_API_URL = os.getenv("PREDICTION_API_URL")
+
 st.set_page_config(layout="wide")
 
 st.html(
@@ -36,7 +38,7 @@ with st.sidebar:
         with st.spinner("Chargement en cours..."):
             try:
                 sleep(2)
-                response = requests.get("http://51.44.126.130:8000/predict")  # Remplacez par votre URL
+                response = requests.get("${PREDICTION_API_URL}/predict")  # Remplacez par votre URL
                 if response.status_code == 200:
                     st.sidebar.success("Prédiction effectuée avec succès !")
                     #st.sidebar.json(response.json())  # Affiche la réponse
