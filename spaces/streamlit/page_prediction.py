@@ -160,12 +160,7 @@ with col1_btn:
 with col2_btn:
     # Clear cache
     with st.container(horizontal=True, horizontal_alignment="right"):
-        if st.button(
-                "Actualiser",
-                icon=":material/refresh:",
-                help="Actualiser les données",
-                label_visibility="collapsed",
-        ):
+        if st.button("", icon=":material/refresh:", help="Actualiser les données"):
             st.cache_data.clear()
 
 
