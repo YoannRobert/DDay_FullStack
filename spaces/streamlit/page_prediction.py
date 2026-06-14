@@ -36,7 +36,7 @@ df_recent = df.copy()
 df_recent.dropna(inplace=True)
 
 # Last date with data
-data_end_date = df_recent['end_date_fr'].max().date()
+data_end_date = df_recent['start_date_fr'].max().date()
 
 
 # Session State
