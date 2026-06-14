@@ -79,6 +79,7 @@ class ConsumptionPrediction():
         mask_train = (
                 (df['start_date'].dt.date >= self.train_start_date)
                 & (df['start_date'].dt.date <= self.train_end_date)
+                & (df['consumption_MW'].notna())
         )
         df_train = df[mask_train]
 
