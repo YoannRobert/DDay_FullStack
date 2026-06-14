@@ -150,16 +150,22 @@ option_days_selection = [ 'J-1', 'J-3', 'J-7']
 col1_btn, col2_btn = st.columns(2, vertical_alignment="bottom")
 with col1_btn:
     st.pills(
-        "",
+        "Sélection de la période",
         key="select_period",
         options=option_days_selection,
-        selection_mode="single",  # un seul sélectionnable à la fois
-        on_change=set_j_value
+        selection_mode="single",
+        on_change=set_j_value,
+        label_visibility="collapsed",
     )
 with col2_btn:
     # Clear cache
     with st.container(horizontal=True, horizontal_alignment="right"):
-        if st.button("", icon=":material/refresh:", help="Actualiser les données"):
+        if st.button(
+                "Actualiser",
+                icon=":material/refresh:",
+                help="Actualiser les données",
+                label_visibility="collapsed",
+        ):
             st.cache_data.clear()
 
 
