@@ -26,7 +26,7 @@ import sys
 import pandas as pd
 import requests
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
 
@@ -613,7 +613,7 @@ def fetch_department_weather(
         [weather_data] if isinstance(weather_data, str) else list(weather_data)
     )
 
-    run_ts = datetime.now()
+    run_ts = datetime.now(tz=timezone.utc)
     ts_str = run_ts.strftime("%Y%m%d_%H%M%S")
 
     print("=" * 65)

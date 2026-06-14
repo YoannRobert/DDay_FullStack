@@ -117,7 +117,7 @@ with col2_date:
 ################################################
 # Chart
 
-fig2 = px.line(df2, x='start_date', y='value', render_mode="svg",
+fig2 = px.line(df2, x='start_date_fr', y='value', render_mode="svg",
     labels={'start_date': '', 'value': 'Consommation (MW)'},
     title=f"Production d'électricité entre {st.session_state.start_date} et {st.session_state.end_date} en MW")
 fig2.update_xaxes(rangeslider_visible=True)

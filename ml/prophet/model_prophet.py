@@ -56,30 +56,33 @@ class ConsumptionPrediction():
         Chargement des données d'entrainement du modèle et futures pour predictions
         """
         return self.load_dataset_s3('dataset/training_dataset.csv')
-    
+
     def create_train_prod_set(self, df):
 
-        # conversions datetime
+        # datetime conversions (tz-aware UTC in memory)
         df['start_date'] = pd.to_datetime(df['start_date'], utc=True)
         df['end_date'] = pd.to_datetime(df['end_date'], utc=True)
         df['start_date_fr'] = df['start_date'].dt.tz_convert('Europe/Paris')
         df['end_date_fr'] = df['end_date'].dt.tz_convert('Europe/Paris')
 
-        # weekend
-        df['is_weekday'] = (df['start_date_fr'].dt.weekday < 5).astype(int)  # 1 lundi-ven, 0 sinon
-        df['is_weekend'] = (df['start_date_fr'].dt.weekday >= 5).astype(int)  # 1 sam-dim, 0 sinon 
+        # Weekend flags computed in UTC, consistent with the training convention.
+        # The small DST mismatch with the French calendar is accepted, in line
+        # with the choice to learn Prophet seasonalities on UTC timestamps.
+        df['is_weekday'] = (df['start_date'].dt.weekday < 5).astype(int)
+        df['is_weekend'] = (df['start_date'].dt.weekday >= 5).astype(int)
 
-        # Last date with row not NaN
-        self.train_end_date = df[df['consumption_MW'].notna()]['end_date'].max().date()
-        # 30 days before
+        # Last UTC calendar day with a non-NaN consumption value.
+        self.train_end_date = df[df['consumption_MW'].notna()]['start_date'].max().date()
         self.train_start_date = self.train_end_date - timedelta(days=30)
-        # hook to modify train date if needed
         self.hook_train_date()
 
-        mask_train = (df['start_date_fr'].dt.date >= self.train_start_date) & (df['start_date_fr'].dt.date <= self.train_end_date)
+        mask_train = (
+                (df['start_date'].dt.date >= self.train_start_date)
+                & (df['start_date'].dt.date <= self.train_end_date)
+        )
         df_train = df[mask_train]
 
-        df_prod = df[df['start_date_fr'].dt.date == (self.train_end_date + timedelta(days=1))]
+        df_prod = df[df['start_date'].dt.date == (self.train_end_date + timedelta(days=1))]
 
         self.train_set = self.convert_df_to_prophet(df_train)
         self.prod_set = self.convert_df_to_prophet(df_prod)
@@ -101,6 +104,9 @@ class ConsumptionPrediction():
         df_prophet = df.copy()
         df_prophet.drop(['start_date','start_date_fr','end_date_fr'], axis=1, inplace=True)
         df_prophet.rename(columns={'end_date': 'ds', 'consumption_MW': 'y',}, inplace=True)
+        # Prophet does not support tz-aware datetimes; we strip the UTC tag here
+        # while keeping the UTC values. This is the only place in the codebase
+        # where datetimes are stored as naive.
         df_prophet['ds'] = pd.to_datetime(df_prophet['ds'], utc=True).dt.tz_convert(None)
         return df_prophet
 
@@ -153,6 +159,7 @@ class ConsumptionPrediction():
             # log
             pass
 
+        prod_pred['ds'] = pd.to_datetime(prod_pred['ds'], utc=True)
         self.new_predictions = prod_pred[['ds', 'yhat']]
         #df_pred.to_csv(os.getenv('DATA_STORAGE') + 'prophet_predictions.csv', index=False)
 
@@ -182,10 +189,10 @@ class ConsumptionPrediction():
         predictions = self.load_predictions_data()
         
         # Convertir les dates des prédictions existantes au même format que new_predictions
-        predictions['ds'] = pd.to_datetime(predictions['ds'])
-        
+        predictions['ds'] = pd.to_datetime(predictions['ds'], utc=True)
+
         # Obtenir les dates des nouvelles prédictions
-        new_prediction_dates = pd.to_datetime(self.new_predictions['ds']).dt.date
+        new_prediction_dates = pd.to_datetime(self.new_predictions['ds'], utc=True).dt.date
         
         # Supprimer les prédictions existantes qui ont les mêmes dates que les nouvelles
         mask_keep = ~predictions['ds'].dt.date.isin(new_prediction_dates)

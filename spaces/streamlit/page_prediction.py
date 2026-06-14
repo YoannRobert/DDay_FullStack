@@ -36,7 +36,7 @@ df_recent = df.copy()
 df_recent.dropna(inplace=True)
 
 # Last date with data
-data_end_date = df_recent['end_date'].max().date()
+data_end_date = df_recent['end_date_fr'].max().date()
 
 
 # Session State
@@ -79,7 +79,8 @@ max_power = df2['consumption_MW'].max()
 
 # calculate metrics for predictions if all in the period
 mask_pred = df_pred['ds_fr'].dt.date >= st.session_state.pred_start_date
-df_pred2 = df_pred[mask_pred].iloc[1:,:]
+last_obs_end = df_recent['end_date_fr'].max()
+df_pred2 = df_pred[df_pred['ds_fr'] > last_obs_end]
 mean_power_pred = df_pred2['yhat'].mean()
 min_power_pred = df_pred2['yhat'].min()
 max_power_pred = df_pred2['yhat'].max()

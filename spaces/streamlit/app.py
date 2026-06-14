@@ -40,9 +40,9 @@ with st.sidebar:
                 sleep(2)
                 response = requests.get(f"{PREDICTION_API_URL}/predict")  # Remplacez par votre URL
                 if response.status_code == 200:
+                    st.cache_data.clear()
                     st.sidebar.success("Prédiction effectuée avec succès !")
-                    #st.sidebar.json(response.json())  # Affiche la réponse
-                    #st.rerun()  # Optionnel : rafraîchit l'app
+                    st.rerun()
                 else:
                     st.sidebar.error(f"Erreur : {response.status_code}")
             except Exception as e:
