@@ -184,20 +184,22 @@ class ConsumptionPrediction():
 
     def prepare_prediction_for_new(self):
         """
-        Prepare predictions for new data by removing predictions from the same date (already predicted)
+        Prepare predictions for new data by removing predictions from the
+        same date (already predicted). If the predictions file does not
+        exist yet (e.g. fresh deployment), start from an empty DataFrame.
         """
-        predictions = self.load_predictions_data()
-        
-        # Convertir les dates des prédictions existantes au même format que new_predictions
-        predictions['ds'] = pd.to_datetime(predictions['ds'], utc=True)
+        try:
+            predictions = self.load_predictions_data()
+        except RuntimeError:
+            # No predictions.csv yet — start fresh
+            return pd.DataFrame(columns=['ds', 'yhat'])
 
-        # Obtenir les dates des nouvelles prédictions
+        predictions['ds'] = pd.to_datetime(predictions['ds'], utc=True)
         new_prediction_dates = pd.to_datetime(self.new_predictions['ds'], utc=True).dt.date
-        
-        # Supprimer les prédictions existantes qui ont les mêmes dates que les nouvelles
+
         mask_keep = ~predictions['ds'].dt.date.isin(new_prediction_dates)
         predictions = predictions[mask_keep]
-        
+
         return predictions[['ds', 'yhat']]
 
     def run(self):
