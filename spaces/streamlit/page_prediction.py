@@ -39,37 +39,36 @@ df_recent.dropna(inplace=True)
 data_end_date = df_recent['start_date_fr'].max().date()
 
 
-# Session State
-default_start_date = data_end_date
-default_end_date = data_end_date
+df = utils.load_recent_dataset()
 
-# select_period
+df['start_date'] = pd.to_datetime(df['start_date'], utc=True)
+df['end_date'] = pd.to_datetime(df['end_date'], utc=True)
+df['start_date_fr'] = df['start_date'].dt.tz_convert('Europe/Paris')
+df['end_date_fr'] = df['end_date'].dt.tz_convert('Europe/Paris')
+
+df_pred = utils.load_prediction_dataset()
+df_pred['ds_fr'] = pd.to_datetime(df_pred['ds'], utc=True).dt.tz_convert('Europe/Paris')
+
+df_recent = df.copy()
+df_recent.dropna(inplace=True)
+
+# Last day with observed data (Paris calendar, consistent with the filters below)
+data_end_date = df_recent['start_date_fr'].max().date()
+last_obs_end = df_recent['end_date_fr'].max()
+
+# Persisted period selection (managed by st.pills via its key="select_period")
 if "select_period" not in st.session_state:
     st.session_state.select_period = 'J-1'
 
-# start_datetime of data
-if "pred_start_date" not in st.session_state:
-    st.session_state.pred_start_date = default_start_date
+# Derive the display window at every rerun, so a fresh predict() that updates
+# data_end_date automatically realigns the window without needing a manual refresh.
+n_days = {'J-1': 0, 'J-3': 2, 'J-7': 6}.get(st.session_state.select_period, 0)
+pred_start_date = data_end_date - timedelta(days=n_days)
+pred_end_date = data_end_date
 
-# end_datetime of data
-if "pred_end_date" not in st.session_state:
-    st.session_state.pred_end_date = default_end_date
-
-mask_start_date = (df['start_date_fr'].dt.date >= st.session_state.pred_start_date) 
-mask_end_date = (df['start_date_fr'].dt.date <= st.session_state.pred_end_date)
+mask_start_date = (df['start_date_fr'].dt.date >= pred_start_date)
+mask_end_date = (df['start_date_fr'].dt.date <= pred_end_date)
 df2 = df[mask_start_date & mask_end_date]
-
-#
-def set_j_value():
-    select_period = st.session_state.select_period
-    if select_period == 'J-1':
-        n_days = 0
-    elif select_period == 'J-3':
-        n_days = 2
-    elif select_period == 'J-7':
-        n_days = 6
-
-    st.session_state.pred_start_date = default_start_date - timedelta(days=n_days)
 
 
 # Calculate metrics for the selected period
@@ -78,7 +77,7 @@ min_power = df2['consumption_MW'].min()
 max_power = df2['consumption_MW'].max()
 
 # calculate metrics for predictions if all in the period
-mask_pred = df_pred['ds_fr'].dt.date >= st.session_state.pred_start_date
+mask_pred = df_pred['ds_fr'].dt.date >= pred_start_date
 last_obs_end = df_recent['end_date_fr'].max()
 df_pred2 = df_pred[df_pred['ds_fr'] > last_obs_end]
 mean_power_pred = df_pred2['yhat'].mean()
@@ -105,10 +104,10 @@ st.html("""
 
 ###############################################
 # Subtitle
-if st.session_state.pred_start_date == st.session_state.pred_end_date:
-    st.subheader(f"Puissance électrique consommée le {st.session_state.pred_start_date.strftime('%d/%m/%Y')}")
+if st.session_state.pred_start_date == pred_end_date:
+    st.subheader(f"Puissance électrique consommée le {pred_start_date.strftime('%d/%m/%Y')}")
 else:
-    st.subheader(f"Puissance électrique consommée entre le {st.session_state.pred_start_date.strftime('%d/%m/%Y')} et le {st.session_state.pred_end_date.strftime('%d/%m/%Y')}")
+    st.subheader(f"Puissance électrique consommée entre le {pred_start_date.strftime('%d/%m/%Y')} et le {st.session_state.pred_end_date.strftime('%d/%m/%Y')}")
 
 
 ###############################################
@@ -154,7 +153,6 @@ with col1_btn:
         key="select_period",
         options=option_days_selection,
         selection_mode="single",
-        on_change=set_j_value,
         label_visibility="collapsed",
     )
 with col2_btn:
