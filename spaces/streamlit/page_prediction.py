@@ -91,7 +91,7 @@ else:
 ###############################################
 # Metrics power
 
-col1_metrics, col2_metrics, col3_metrics = st.columns((4,2,2))
+col1_metrics, col2_metrics, col3_metrics = st.columns((4, 2, 2))
 
 with col1_metrics:
     with st.container(border=True, key="mean_metrics"):
@@ -115,4 +115,41 @@ with col3_metrics:
         with col31_prod:
             st.metric("Puissance maximale", f"{max_power:.2f} MW")
         with col32_pred:
-            st.metric("Prédiction maximale", f"{max
+            st.metric("Prédiction maximale", f"{max_power_pred:.2f} MW", f"{delta_max_power:.2f} MW")
+
+##############################################
+
+
+###############################################
+# Filtre période
+option_days_selection = ['J-1', 'J-3', 'J-7']
+
+col1_btn, col2_btn = st.columns(2, vertical_alignment="bottom")
+with col1_btn:
+    st.pills(
+        "Sélection de la période",
+        key="select_period",
+        options=option_days_selection,
+        selection_mode="single",
+        label_visibility="collapsed",
+    )
+with col2_btn:
+    # Clear cache
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        if st.button("", icon=":material/refresh:", help="Actualiser les données"):
+            st.cache_data.clear()
+
+
+################################################
+# Chart
+fig = px.line(df2, x='end_date_fr', y='consumption_MW', range_y=[20000, None],
+              title="Puissance électrique consommée et prédictions en MW",
+              labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'})
+fig.add_trace(px.line(df_pred2, x='ds_fr', y='yhat').data[0])
+
+fig.data[0].update({'name': 'Consommation'})
+fig.data[1].update({'line': dict(dash='dash', color="green"), 'name': 'Prédiction'})
+fig.update_traces(showlegend=True)
+
+with st.container(border=1):
+    st.plotly_chart(fig)
