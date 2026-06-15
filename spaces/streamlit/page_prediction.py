@@ -1,42 +1,14 @@
 import pandas as pd
 import streamlit as st
-import numpy as np
 import plotly.express as px
 from datetime import timedelta
 from dotenv import load_dotenv
 import utils
-import os
 
 
 load_dotenv()
 
 st.set_page_config(layout="wide")
-
-@st.cache_data(ttl=3600)
-def load_recent_dataset():
-    return utils.load_dataset_s3("dataset/training_dataset.csv")
-
-@st.cache_data(ttl=3600)
-def load_prediction_dataset():
-    return utils.load_dataset_s3("dataset/predictions.csv")
-
-
-df = load_recent_dataset()
-
-df['start_date'] = pd.to_datetime(df['start_date'], utc=True)
-df['end_date'] = pd.to_datetime(df['end_date'], utc=True)
-df['start_date_fr'] = df['start_date'].dt.tz_convert('Europe/Paris')
-df['end_date_fr'] = df['end_date'].dt.tz_convert('Europe/Paris')
-
-df_pred = load_prediction_dataset()
-df_pred['ds_fr'] = pd.to_datetime(df_pred['ds'], utc=True).dt.tz_convert('Europe/Paris')
-
-
-df_recent = df.copy()
-df_recent.dropna(inplace=True)
-
-# Last date with data
-data_end_date = df_recent['start_date_fr'].max().date()
 
 
 df = utils.load_recent_dataset()
@@ -70,19 +42,25 @@ mask_start_date = (df['start_date_fr'].dt.date >= pred_start_date)
 mask_end_date = (df['start_date_fr'].dt.date <= pred_end_date)
 df2 = df[mask_start_date & mask_end_date]
 
+# Predictions are kept from pred_start_date onward (Paris calendar), matching
+# the start of the consumption curve. This makes the green curve overlap the
+# blue one on the past period, enabling visual retrospective comparison of
+# past predictions vs actual consumption. The forecast tail beyond
+# last_obs_end is naturally preserved.
+df_pred2 = df_pred[df_pred['ds_fr'].dt.date >= pred_start_date]
 
-# Calculate metrics for the selected period
+
+# Metrics for the observed period (blue curve)
 mean_power = df2['consumption_MW'].mean()
 min_power = df2['consumption_MW'].min()
 max_power = df2['consumption_MW'].max()
 
-# calculate metrics for predictions if all in the period
-mask_pred = df_pred['ds_fr'].dt.date >= pred_start_date
-last_obs_end = df_recent['end_date_fr'].max()
-df_pred2 = df_pred[df_pred['ds_fr'] > last_obs_end]
-mean_power_pred = df_pred2['yhat'].mean()
-min_power_pred = df_pred2['yhat'].min()
-max_power_pred = df_pred2['yhat'].max()
+# Metrics for the prediction restricted to the same observed window, so the
+# delta against the consumption metrics compares two values on the same time range.
+df_pred_for_metrics = df_pred2[df_pred2['ds_fr'] <= last_obs_end]
+mean_power_pred = df_pred_for_metrics['yhat'].mean()
+min_power_pred = df_pred_for_metrics['yhat'].min()
+max_power_pred = df_pred_for_metrics['yhat'].max()
 
 delta_mean_power = mean_power_pred - mean_power
 delta_min_power = min_power_pred - min_power
@@ -137,43 +115,4 @@ with col3_metrics:
         with col31_prod:
             st.metric("Puissance maximale", f"{max_power:.2f} MW")
         with col32_pred:
-            st.metric("Prédiction maximale", f"{max_power_pred:.2f} MW", f"{delta_max_power:.2f} MW")
-
-##############################################
-
-
-###############################################
-# Filtre période
-option_days_selection = [ 'J-1', 'J-3', 'J-7']
-
-col1_btn, col2_btn = st.columns(2, vertical_alignment="bottom")
-with col1_btn:
-    st.pills(
-        "Sélection de la période",
-        key="select_period",
-        options=option_days_selection,
-        selection_mode="single",
-        label_visibility="collapsed",
-    )
-with col2_btn:
-    # Clear cache
-    with st.container(horizontal=True, horizontal_alignment="right"):
-        if st.button("", icon=":material/refresh:", help="Actualiser les données"):
-            st.cache_data.clear()
-
-
-
-################################################
-# Chart
-fig = px.line(df2, x='end_date_fr', y='consumption_MW', range_y=[20000, None],
-    title=f"Puissance électrique consommée et prédictions en MW",
-    labels={'end_date_fr': '', 'consumption_MW': 'Consommation (MW)'},)
-fig.add_trace( px.line(df_pred2, x='ds_fr', y='yhat',).data[0] )
-
-fig.data[0].update({'name':'Consommation'})
-fig.data[1].update({'line':dict(dash='dash', color="green"), 'name':'Prédiction'})
-fig.update_traces(showlegend = True)
-
-with st.container(border=1):
-    st.plotly_chart(fig)
-
+            st.metric("Prédiction maximale", f"{max
