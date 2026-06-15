@@ -104,10 +104,10 @@ st.html("""
 
 ###############################################
 # Subtitle
-if st.session_state.pred_start_date == pred_end_date:
+if pred_start_date == pred_end_date:
     st.subheader(f"Puissance électrique consommée le {pred_start_date.strftime('%d/%m/%Y')}")
 else:
-    st.subheader(f"Puissance électrique consommée entre le {pred_start_date.strftime('%d/%m/%Y')} et le {st.session_state.pred_end_date.strftime('%d/%m/%Y')}")
+    st.subheader(f"Puissance électrique consommée entre le {pred_start_date.strftime('%d/%m/%Y')} et le {pred_end_date.strftime('%d/%m/%Y')}")
 
 
 ###############################################
