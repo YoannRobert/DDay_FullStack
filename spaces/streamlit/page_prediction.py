@@ -91,7 +91,7 @@ else:
 ###############################################
 # Metrics power
 
-col1_metrics, col2_metrics, col3_metrics = st.columns((4, 2, 2))
+col1_metrics, col2_metrics, col3_metrics = st.columns((3, 2, 2))
 
 with col1_metrics:
     with st.container(border=True, key="mean_metrics"):
