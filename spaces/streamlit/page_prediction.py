@@ -97,25 +97,25 @@ with col1_metrics:
     with st.container(border=True, key="mean_metrics"):
         col11_prod, col12_pred = st.columns(2)
         with col11_prod:
-            st.metric("Puissance moyenne", f"{mean_power:.2f} MW")
+            st.metric("Puissance moyenne réelle", f"{mean_power:.2f} MW")
         with col12_pred:
-            st.metric("Prédiction moyenne", f"{mean_power_pred:.2f} MW", f"{delta_mean_power:.2f} MW")
+            st.metric("Puissance moyenne prédite", f"{mean_power_pred:.2f} MW", f"{delta_mean_power:.2f} MW")
 
 with col2_metrics:
     with st.container(border=True, key="min_metrics"):
         col21_prod, col22_pred = st.columns(2)
         with col21_prod:
-            st.metric("Puissance minimale", f"{min_power:.2f} MW")
+            st.metric("Puissance minimale réelle", f"{min_power:.2f} MW")
         with col22_pred:
-            st.metric("Prédiction minimale", f"{min_power_pred:.2f} MW", f"{delta_min_power:.2f} MW")
+            st.metric("Puissance minimale prédite", f"{min_power_pred:.2f} MW", f"{delta_min_power:.2f} MW")
 
 with col3_metrics:
     with st.container(border=True, key="max_metrics"):
         col31_prod, col32_pred = st.columns(2)
         with col31_prod:
-            st.metric("Puissance maximale", f"{max_power:.2f} MW")
+            st.metric("Puissance maximale réelle", f"{max_power:.2f} MW")
         with col32_pred:
-            st.metric("Prédiction maximale", f"{max_power_pred:.2f} MW", f"{delta_max_power:.2f} MW")
+            st.metric("Puissance maximale prédite", f"{max_power_pred:.2f} MW", f"{delta_max_power:.2f} MW")
 
 ##############################################
 
